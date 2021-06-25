@@ -1,38 +1,48 @@
-%% Magnetic Field Under XPCS 9
+%% Magnetic Field Under XPCS 9.1
 % 1. Import Equilibrium test, Repetition test 
 % 2. Imported Dose study
-
+% The 8% data is problematic. Let's avoid using it
 
 clc,clear
 close all
 
 %% Read Data
-
+BetaArray = [0.138, 0.135, 0.133, 0.129, 0.128, 0.129, 0.129, 0.130];
 AttArray = {'0.007','0.036','0.190','1.000'};
 EpsArray = {'1.334','9.994','99.994'};
-DoseArrayTota = [0.0093 0.0480 0.0700 0.2535 0.3598 0.7000 1.3340 1.8989 3.5998 9.9940 18.9989 99.9940];
-DoseNum = 6;
-Doselim = 1;% lower dose limit bound this is what is was previouslyDoseArrayTota(DoseNum);
-Doselim2 = 2; % these two Dose limits ensure doses are in between 1 and 2
-Threshold = 0.2;
-RefinedLength = 6;
-EqDiff = 0.05;
-RpDiff = 0.05;
-RpNum = 2; % used in the equil and rpt check, I think this is the number of times the experiment was repeated 
+
+% Generate Dose Array
+DoseIndex = 1;
+for AttIndex = 1:length(AttArray)
+    for EpsIndex = 1:length(EpsArray)
+        Att = AttArray{AttIndex};
+        Eps = EpsArray{EpsIndex};
+        DoseArray(DoseIndex) = str2num(Att)*str2num(Eps);
+        DoseIndex = DoseIndex +1;
+    end
+end
+DoseArrayTotal = unique(DoseArray);
+DoseLolim = 5;% Lower dose limit INDEX;
+DoseUplim = 7; % Higher dose limit INDEX
+
+% Threshold = 0.2;
+% RefinedLength = 6;
+EqDiff = 0.01;
+RpDiff = 0.01;
+RpNum = 2; % used in the equil and rpt check, this is the number of times the experiment was repeated 
 PassRate = 0.95;
-SmoothnessThreshold = 0;
-Beta = 0.12;
+% SmoothnessThreshold = 0;
 PlotIndex = 1;
 
-%     % Folder names for Jiajun (comment out next 3 lines when not in use)
-%     MainFolfer = 'E:\文档\Beamline\Data\Results_Asamples\Results_Asamples_Renamed2';
-%     ResultFolder = 'E:\文档\Beamline\Data\CNCUnderMagneticField\Results\';
-%     SaveFolderName = 'CNCMagneticFild8\';
+% Folder names for Jiajun (comment out next 3 lines when not in use)
+MainFolder = 'E:\文档\Beamline\Data\Results_Asamples\Results_Asamples_Renamed2';
+ResultFolder = 'E:\文档\Beamline\Data\CNCUnderMagneticField\Results\';
+SaveFolderName = 'CNCMagneticFild8\';
 
 % Folder names for Andrew (comment out next 3 lines when not in use)
-MainFolder = 'C:\Users\anbae\Documents\Research\Isotrpoic_Result_CNC';
-ResultFolder = 'C:\Users\anbae\Documents\Research\CNCUnderMagneticFieldResults\';
-SaveFolderName = 'CNCMagneticField8\';
+% MainFolder = 'C:\Users\anbae\Documents\Research\Isotrpoic_Result_CNC';
+% ResultFolder = 'C:\Users\anbae\Documents\Research\CNCUnderMagneticFieldResults\';
+% SaveFolderName = 'CNCMagneticField8\';
 SaveFolderNameDose = 'Dose Study\'; % folder inside SaveFolderName for the dose study
 
 SaveFolder = [ResultFolder,SaveFolderName];
@@ -41,7 +51,7 @@ SaveFolderDose = [ResultFolder,SaveFolderName, SaveFolderNameDose]; % save path 
 
 CelluloseType = 'CNC';
 Solvent = 'PG';
-PlotCell{1} = [9, 12, 17, 22, 32]; % folders numbers for concentration variation
+PlotCell{1} = [9, 12, 17, 22]; % folders numbers for concentration variation [9, 12, 17, 22, 32]
 PlotCell{2} = [23, 24, 25]; % folder numbers for MagneticfieldExposureTime Variation
 PlotCell{3} = [35, 3, 6]; % folder numbers CaCl2 variation
 
@@ -92,7 +102,8 @@ end
                 % Dose filter, filtering out doses that do not have good data
                 clear Dose
                 Dose = str2num(Att).*str2num(Esp);
-                if Dose > Doselim && Dose < Doselim2
+                
+                if Dose >= DoseArrayTotal(DoseLolim) &&  Dose <= DoseArrayTotal(DoseUplim) %&& str2num(Att)<= AttUpBond
                    
                 
                     RunIndex = RunIndex + 1;
@@ -150,7 +161,7 @@ end
         switch CaseNum
             case 1
                 ExpName = 'Concentration Variation';
-                Xarray = [1 2 4 6 8]; 
+                Xarray = [1 2 4 6]; %[1 2 4 6 8]
                 XUnit = ' (wt%)';
             case 2
                 ExpName = 'MagneticfieldExposureTime Variation';
@@ -159,10 +170,11 @@ end
             case 3
                 ExpName = 'CaCl2 Variation';
                 Xarray = [0.5 1 2];
-                XUnit = 'CaCl_2 Amount';   
+                XUnit = 'CaCl_2 Unit';   
         end % end of the switch statement
         
-        for qNum = 1:8 % go through all of the q values 
+        for qNum = 1:5 % go through all of the q values (max of qNum is 5)
+            Beta = BetaArray(qNum);
             for PlotIndex = 1:length(Xarray) % this determines what folders to go into for this case 
                 ColorVec = 0.8*jet(length(Xarray)); % to be used later in plotting C vs tau
                 
@@ -268,7 +280,7 @@ end
                 BLDataY = G2(end-9:end);
                 G2_Inf = mean(BLDataY); %takes the mean of the last 10 data points and defines that as G2 inf
 
-                % Beat Correction
+                % Beta Correction
                 C = (G2-G2_Inf)/(Beta - G2_Inf + 1); %square of G1
                 
                
@@ -297,118 +309,6 @@ end
                 PlotG2FitSingle{PlotIndex} = CFitSingle;
              end   
                 
-                
-                    % I think the rest of this is old stuff
-%                 %% G2 Data Baseline Refine Process
-%                 [SegmentSizeBase,UidSizeBase] = size(g2Value_RefinedRaw);
-%                 for SegmentIndex = 1:SegmentSizeBase
-%                     for UidIndex = 1:UidSizeBase
-% 
-%                         SegmentxData = Tau_RefinedRaw{SegmentIndex,UidIndex};
-%                         SegmentyData = g2Value_RefinedRaw{SegmentIndex,UidIndex};
-% 
-%                         % Set up fittype and options.
-%                         ft = fittype( 'a1*exp(a2*x)+a3*exp(a4*x)+a5', 'independent', 'x', 'dependent', 'y' );
-%                         opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
-%                         opts.Display = 'Off';
-%                         opts.Lower = [0 -Inf 0 -Inf 1];
-%                         opts.StartPoint = [0.255095115459269 0.505957051665142 0.699076722656686 0.890903252535798 0.959291425205444];
-%                         opts.Upper = [Inf 0 Inf 0 Inf];
-%                         %                 opts.Upper = [Inf 0 Inf 0 2];
-% 
-%                         % Fit model to data.
-%                         [SegmnetFitresult, gof] = fit( SegmentxData, SegmentyData, ft, opts );
-%                         CoefCell{SegmentIndex,UidIndex} = coeffvalues(SegmnetFitresult);
-% 
-% 
-%                     end
-%                 end
-% 
-% 
-%                 % Remove g2 baseline
-% 
-% 
-%                 for SegmentIndex = 1:SegmentSizeBase
-%                     for UidIndex = 1:UidSizeBase
-%                         SegmentCoeffArray = CoefCell{SegmentIndex,UidIndex};
-%                         Baseline = SegmentCoeffArray(5);
-%                         g2ValueFitRefined{SegmentIndex,UidIndex} = g2Value_RefinedRaw{SegmentIndex,UidIndex} / Baseline;
-% 
-%                     end
-%                 end
-% 
-% 
-%                 % Merge multiple scans
-%                 for SegmentIndex = 1:SegmentSizeBase
-%                     Tau_RefinedCat = [];
-%                     g2ValueCat = [];
-%                     for UidIndex = 1:UidSizeBase
-% 
-%                         g2ValueCat = cat(1,g2ValueFitRefined{SegmentIndex,UidIndex},g2ValueCat);
-%                         Tau_RefinedCat = cat(1,Tau_RefinedRaw{SegmentIndex,UidIndex},Tau_RefinedCat);
-%                     end
-%                     g2Value{SegmentIndex} = g2ValueCat;
-%                     Tau_Refined{SegmentIndex} = Tau_RefinedCat;
-%                 end
-% 
-%                 % Assamble segments data
-% 
-%                 CatG2 = [];
-%                 CatTau = [];
-%                 CatIndex = 1;
-%                 for SegmentIndex = 1:SegmentSizeBase
-%                     CatTau = cat(1,CatTau,Tau_Refined{SegmentIndex});
-%                     CatG2 = cat(1,CatG2,g2Value{SegmentIndex});
-%                     CatIndex = CatIndex + 1;
-% 
-%                 end
-% 
-%                 [TAU,TAUSortIndex] = sort(CatTau);
-%                 g2 = CatG2(TAUSortIndex);
-% 
-% 
-% 
-%                 %% Fit Refined Data with Double Exponetial Decay
-%                 % Set up fittype and options.
-%                 ft = fittype( 'a1*exp(a2*x)+a3*exp(a4*x)+a5', 'independent', 'x', 'dependent', 'y' );
-%                 opts = fitoptions( 'Method', 'NonlinearLeastSquares' );
-%                 opts.Display = 'Off';
-%                 opts.Lower = [0 -Inf 0 -Inf 1];
-%                 opts.StartPoint = [0.255095115459269 0.505957051665142 0.699076722656686 0.890903252535798 0.959291425205444];
-%                 opts.Upper = [Inf 0 Inf 0 Inf];
-%                 %                 opts.Upper = [Inf 0 Inf 0 2];
-% 
-%                 % Fit model to data.
-%                 [G2Fitresult, gof] = fit( TAU, g2, ft, opts );
-% 
-%                 G2Fit = feval(G2Fitresult,TAU);
-%                 CoefArray = coeffvalues(G2Fitresult);
-% 
-%                 %% Plot G2 and G2 sgement fit
-%                 ColorVec = 0.8*jet(length(PlotArray));
-% 
-% 
-%                 % Compute D_t and D_r
-%                 % Gamma_0 = q^2 * D_t
-%                 % Gamma_1 = q^2 * D_t + 6*D_r
-%                 Gamma_0 = -CoefArray(2)/CoefArray(5);
-%                 Gamma_1 = -CoefArray(4)/CoefArray(5);
-%                 if Gamma_0 > Gamma_1
-%                     Gamma_temp = Gamma_0;
-%                     Gamma_0 = Gamma_1;
-%                     Gamma_1 = Gamma_temp;
-%                 end
-%                 D_t = Gamma_0/((qValue)^2); % Unit nm^2/s
-%                 D_r = (Gamma_1-Gamma_0)/6; % Unit 1/s
-% 
-%                 DArray(PlotIndex,:) = [D_t,D_r];
-% 
-%                 G2LineArray(PlotIndex) = line(TAU,g2,'LineStyle','none','Marker','o','LineWidth',2,'Color',ColorVec(PlotIndex,:));
-%                 G2LengendArray{PlotIndex} = SampleFolderList{ExpNumIndex};
-%                 G2FitLineArray(PlotIndex) = line(TAU,G2Fit,'LineWidth',2,'Color',ColorVec(PlotIndex,:));
-% 
-%             end
-
         
       %% Plot Fit C vs Tau  
       figure; 
@@ -452,45 +352,4 @@ end % end of the for loop for the different cases
 
 
 
-% %% Plot D_t and D_r
-% 
-% for CaseNum = 1:2
-%     figure;
-%     switch CaseNum
-%         case 1
-%             ExpName = 'Concentratioin Variation';
-%             Xarray = [1 2 3 4 5 6 7 8];
-%             XUnit = 'Concentration(wt%)';
-%         case 3
-%             ExpName = 'CaCl2 Variation';
-%             Xarray = [1 2 0.5];
-%             XUnit = 'CaCl_2 Amount';
-%         case 2
-%             ExpName = 'MagneticfieldExposureTime Variation';
-%             Xarray = [0 1 3 28];
-%             XUnit = 'Time(h)';
-%     end
-%     
-% 
-%         DArrayPlot = DCell{CaseNum};
-% %         display(DArrayPlot);
-%         D_tArray = DArrayPlot(:,1);
-%         D_rArray = DArrayPlot(:,2);
-%         
-%         yyaxis left
-%         D_tLine = line(Xarray,D_tArray,'LineStyle','--','Marker','o','LineWidth',2,'Color','blue');
-%         ylabel('D_t')
-%         
-%         yyaxis right
-%         D_rLine = line(Xarray,D_rArray,'LineStyle','--','Marker','o','LineWidth',2,'Color','red');
-%         legend({'D_tLine', 'D_rLine'})
-%         % Dlegend = legend([D_tLine,D_rLine],DLengendArray);
-%         xlabel(XUnit)
-%         ylabel('D_r')
-%         title(ExpName)
-%         FigureTitle = ['DPlot' ExpName];
-%         SaveTitle = [FigureTitle,'.png'];
-%         SavePath = strcat(SaveFolder,SaveTitle);
-%         saveas(gcf,SavePath);
-%    
-% end
+
